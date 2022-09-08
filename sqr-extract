@@ -1,0 +1,119 @@
+// Minimum number of impressions to consider "enough data"
+var IMPRESSIONS_THRESHOLD = 10;
+// Cost-per-click (in account currency) we consider an expensive keyword.
+var CLICKS_THRESHOLD = 0;
+// Threshold we use to decide if a keyword is a good performer or bad - IF U WANT >=1 USE 0.01
+var CONVERSIONS_THRESHOLD = 1;
+//URL of the spreasheet
+var GDOC = "https://docs.google.com/spreadsheets/d/1cyFt6sSgDXooeuIYqo9lHwyiIcJzl1n8_XeR6tjNS1Q/edit#gid=0";
+var ss	= SpreadsheetApp.openByUrl(GDOC);
+
+var columns = [
+ 'CampaignName',
+ 'AdGroupName',
+ 'Query',
+ 'AverageCpc',
+ 'Impressions',
+ 'Clicks',
+ 'Ctr',
+ 'Cost',
+ 'ConversionRate',
+ 'CostPerConversion',
+  'Conversions'
+ ];
+
+/**
+ * Configuration to be used for running reports.
+ */
+var REPORTING_OPTIONS = {
+  // Comment out the following line to default to the latest reporting version.
+  apiVersion: 'v201802'
+};
+
+function main() {
+  	
+  	var sheet	= ss.getSheetByName("SQR report");
+	sheet.clear();
+	sheet.appendRow([
+ 'CampaignName',
+ 'CampaignCleaned', 
+ 'AdGroupName',
+ 'Query',
+ 'AverageCpc',
+ 'Impressions',
+ 'Clicks',
+ 'Ctr',
+ 'Cost',
+ 'ConversionRate',
+ 'CostPerConversion',
+  'Conversions'
+ ]);
+  	
+  	// Get all the search queries in all the accounts
+   //  var positiveKeywords = [];
+     var columnsStr = columns.join(',') + " ";
+    var query	= 'SELECT ' + columnsStr +
+     'FROM SEARCH_QUERY_PERFORMANCE_REPORT ' +
+     ' WHERE '+
+          	' Impressions >= ' + IMPRESSIONS_THRESHOLD +
+        	' AND Clicks >= ' + CLICKS_THRESHOLD;
+  	if(CONVERSIONS_THRESHOLD>0){query	+=  ' AND Conversions > ' + CONVERSIONS_THRESHOLD;}
+    query	+=  ' AND QueryTargetingStatus = NONE DURING LAST_30_DAYS'; 
+  	var SQRreport = AdWordsApp.report(query);
+  	
+  	// Get all the keywords in the acccount
+     var allKeywords = [];
+     var report = AdWordsApp.report(
+     "SELECT AdGroupId, Criteria " +
+     "FROM KEYWORDS_PERFORMANCE_REPORT " +
+     "WHERE KeywordMatchType = EXACT " +
+     "DURING TODAY");
+     var rows = report.rows();
+       while (rows.hasNext()) {
+       		var row = rows.next();
+       		var KeywordsLower = row['Criteria'].toLowerCase();
+       		allKeywords.push(KeywordsLower);
+       }	
+   
+  	 var rows = SQRreport.rows(); 
+  		var i	= 1;
+  		var io	= 0;
+  	var orange	= [];
+  
+     while (rows.hasNext()) {
+     	var row = rows.next();
+       	i++;
+        //cleaning campaign name
+       var cleaname	= row['CampaignName'].replace("-M-","-D-");
+       cleaname	= cleaname.replace("-T-","-D-");
+       cleaname	= cleaname.replace("GS4","GS0");
+       cleaname	= cleaname.replace("GS5","GS1");
+       cleaname	= cleaname.replace("GS6","GS2");
+       cleaname	= cleaname.replace("-D-B","-D-E");
+
+       sheet.appendRow([ row['CampaignName'], cleaname, row['AdGroupName'], row['Query'], row['AverageCpc'], row['Impressions'], row['Clicks'], row['Ctr'], row['Cost'], row['ConversionRate'], row['CostPerConversion'], row['Conversions']]);
+       if (allKeywords.indexOf(row['Query']) > -1){//if query already somewhere in the structure	
+       		sheet.getRange(i,4).setBackground("orange");
+         	orange[io]	= [];
+         	orange[io][0]	= row['CampaignName'];
+         	orange[io][1]	= row['AdGroupName'];         	
+			orange[io][2]	= row['Query'];
+         	io++;
+         
+       }
+     } 
+  
+  	//prepare the orange sheet with potential negs	
+ 	var sheet	= ss.getSheetByName("Orange Negs");
+	sheet.clear();
+	sheet.appendRow([
+     'Campaign',
+     'AdGroup',
+     'Keyword',
+     'Match type'
+     ]);
+    
+	for(var r = 0; r < orange.length; r++) {
+		sheet.appendRow([orange[r][0],orange[r][1],orange[r][2],'Exact']);       
+     }
+}
