@@ -3,9 +3,9 @@ var GDOC = "https://docs.google.com/spreadsheets/d/1cyFt6sSgDXooeuIYqo9lHwyiIcJz
 var ss	= SpreadsheetApp.openByUrl(GDOC);
 
 function main() {
-  
+
   var sheet	= ss.getSheetByName("SQR clean");
-  
+
   	// This represents ALL the data
    var range = sheet.getDataRange();
    var values = range.getValues();
@@ -13,17 +13,17 @@ function main() {
   var bulksheet	= ss.getSheetByName("Bulk Export");
   bulksheet.clear();
   bulksheet.appendRow([ "Campaign", "Ad group", "Keyword", "Match type", "Max CPC", "Landing URL"]);
-  
+
   //let's loop on the value list to write the export data
   for (var i = 1; i < values.length; i++) {
-   
+
     //prep values
     var cpgn	= values[i][0];
     var adgroup	= values[i][1];
     var kw	= values[i][2];
     var cpc	= values[i][3];
-    
-   
+
+
     //D-E
     bulksheet.appendRow([ cpgn, adgroup, kw, "Exact", cpc, ""]);
 
@@ -33,8 +33,10 @@ function main() {
       	//D-B
     	bulksheet.appendRow([ cpgnBroad, adgroup, '"'+kw +'"', "Phrase", cpc, ""]);
 
-    } 
-   
+    }
+
  }
-  
+
 }
+
+//change
